@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="transform-csv-to-json-xml-xlsx-Flow" doc:id="0020f7f8-c46b-4659-be2d-2ba1bdabf767" >
+		<file:listener doc:name="CSV Files" doc:id="1f8daec2-aba9-4fd8-80f5-3263331349a1" directory="C:\workspace\MuleSoft\MuleSoftWithFish\Hands-On\data-transformation\input" autoDelete="true" moveToDirectory="C:\workspace\MuleSoft\MuleSoftWithFish\Hands-On\data-transformation\backup" renameTo="#[&quot;backup-&quot; ++ now() as String{format:'Y-M-d-h-m-s'}++ &quot;-&quot; ++ vars.fileName]">
+			<scheduling-strategy >
+				<fixed-frequency frequency="10" timeUnit="SECONDS" />
+			</scheduling-strategy>
+			<file:matcher filenamePattern="*.csv" />
+		</file:listener>
+		<set-variable value="#[attributes.fileName]" doc:name="fileName" doc:id="006552bb-6f93-4b83-bb85-ca9236665711" variableName="fileName"/>
+		<scatter-gather doc:name="Scatter-Gather" doc:id="78c15f47-4717-495c-8159-2be83c417ef2" >
+			<route >
+				<flow-ref doc:name="CSV to JSON" doc:id="8974fc07-c9e2-440c-ac80-3ba4e6d8bfe9" name="csv-to-json-subflow"/>
+			</route>
+			<route >
+				<flow-ref doc:name="CSV to XML" doc:id="2673a182-e54c-4303-b3c5-6c9b810bdc1b" name="csv-to-xml-subflow"/>
+			</route>
+			<route >
+				<flow-ref doc:name="CSV to XlSX" doc:id="0e2b78da-27d8-4505-a984-29ecc6d022aa" name="csv-to-xlsx-subflow"/>
+			</route>
+		</scatter-gather>
+	</flow>
+	<sub-flow name="csv-to-json-subflow" doc:id="7dafd87b-a123-4dc4-9343-994dd43096f0">
+		<ee:transform doc:name="CSV to JSON" doc:id="a3ca390a-f948-49f6-8e23-1ef85764c66c">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload
+
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="4aafefa9-de5a-402d-8496-6782ba15b6fd" config-ref="File_Config" path="#[(vars.fileName splitBy  &quot;.&quot;)[0] ++ &quot;-&quot;  ++ now() as String {format: 'y-M-d-h-m-s'} ++  &quot;.json&quot;]" />
+	</sub-flow>
+	<sub-flow name="csv-to-xml-subflow" doc:id="8038c11e-b146-4c09-b38e-c891fcf55738" >
+		<ee:transform doc:name="CSV to XML" doc:id="58b431a2-e1a4-4845-a63e-10cb92068b0b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+{
+	airports: {
+		airport: payload
+	}
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="05086941-63ad-4940-b576-8b87a197b104" path="#[(vars.fileName splitBy  &quot;.&quot;)[0] ++ &quot;-&quot;  ++ now() as String {format: 'y-M-d-h-m-s'} ++  &quot;.xml&quot;]" config-ref="File_Config"/>
+	</sub-flow>
+	<sub-flow name="csv-to-xlsx-subflow" doc:id="23e85810-2261-445a-87e5-08a8bf3badc5" >
+		<ee:transform doc:name="CSV to XLSX" doc:id="2155fd15-7199-44f8-bcb9-8e0704f07e74" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xlsx
+---
+
+	'airports':payload 
+
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="42a7cb7c-9723-4c1b-aaea-8d18b3e106a4" path="#[(vars.fileName splitBy  &quot;.&quot;)[0] ++ &quot;-&quot; ++ now() as String {format: 'y-M-d-h-m-s'} ++ &quot;.xlsx&quot;]" config-ref="File_Config"/>
+	</sub-flow>
+</mule>
